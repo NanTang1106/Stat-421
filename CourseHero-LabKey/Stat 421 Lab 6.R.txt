@@ -1,0 +1,206 @@
+
+# Consider example 7.2.
+# Here is the data for it:
+
+   rm(list=ls(all=TRUE))
+   library(AlgDesign)    
+   contr = as.character("contr.helmert")  
+   design = gen.factorial(2,4,varNames=c("A","B","C","D"), factors="all") 
+   attach(design)
+   y = c(45,71,48,65,68,60,80,65,43,100,45,104,75,86,70,96)
+
+######################## 
+
+# Q1: Write code to gerenate the anova table for the full model.
+# Soln1:
+
+   lm.1 = lm(y ~ A*B*C*D, contrasts = list(A=contr,B=contr,C=contr,D=contr)) 
+   summary.aov(lm.1)
+
+# A            1 1870.6  1870.6
+# B            1   39.1    39.1
+# C            1  390.1   390.1
+# D            1  855.6   855.6
+# A:B          1    0.1     0.1
+# A:C          1 1314.1  1314.1
+# B:C          1   22.6    22.6
+# A:D          1 1105.6  1105.6
+# B:D          1    0.6     0.6
+# C:D          1    5.1     5.1
+# A:B:C        1   14.1    14.1
+# A:B:D        1   68.1    68.1
+# A:C:D        1   10.6    10.6
+# B:C:D        1   27.6    27.6
+# A:B:C:D      1    7.6     7.6
+
+######################### 
+
+# Q2: Without using the mod2 method, and by examining the design matrix itself,
+# define the block factor that corresponds to the following blocks: 
+# Block 1: (1), ab, ac, bc, ad, bd, cd, abcd 
+# Block 2: a, b, c, d, abc, bcd, acd, abd 
+
+# Soln2: 
+
+   L = as.factor(c(1,2,2,1, 2,1,1,2, 2,1,1,2, 1,2,2,1))  
+
+###########################
+
+# Q3: Write code to make the anova table for a full model, including the block 
+# factor and even all interations including the block factor.
+
+# Soln3:
+
+   lm.2 = lm(y ~ A*B*C*D*L, contrasts = list(A=contr,B=contr,C=contr,D=contr,L=contr)) 
+   summary.aov(lm.2)
+
+#             Df Sum Sq Mean Sq
+# A            1 1870.6  1870.6
+# B            1   39.1    39.1
+# C            1  390.1   390.1
+# D            1  855.6   855.6
+# L            1    7.6     7.6
+# A:B          1    0.1     0.1
+# A:C          1 1314.1  1314.1
+# B:C          1   22.6    22.6
+# A:D          1 1105.6  1105.6
+# B:D          1    0.6     0.6
+# C:D          1    5.1     5.1
+# A:L          1   27.6    27.6
+# B:L          1   10.6    10.6
+# C:L          1   68.1    68.1
+# D:L          1   14.1    14.1
+
+####################################
+
+# Q4: Note that the same *number* of effects (i.e. lines) appear in the anova
+# tables for the two models (with and without blocking). Explain why.
+
+# Soln4:
+# The number of effects that can be estimated is fixed: With 4 factors,
+# df = 2^4 - 1 = 15, and so 15 effects can be estimated, i.e., there are
+# 15 numbers representing *some* effects. 
+
+#####################################
+
+# Q5: Note that the same *SS values* appear in both tables, but are assigned
+# to different effects. Explain why.
+
+# Soln5:
+
+# The SS values (and effects - not shown) are the same whether or not an 
+# explicit blocking factor (L) appears in lm.  What blocking does is to 
+# change the specific effects that the 15 numbers represent. If L is truly
+# a block factor, then all the effects that involve L will be confounded
+# with block effect, and so those numbers represent a combination of
+# effects involving factor effects and block effects. If L is not a
+# blocking factor, then the 15 numbers represent factor effects only.
+
+#######################################################
+
+# Q6: Write code the make the anova table for a "full model" that involves 
+# all of the factors A, B, C, D and their interactions, and the block factor, 
+# but WITHOUT any interactions involving the block factor.
+
+# Soln6:
+
+ lm.3 = lm(y ~ L + A*B*C*D, contrasts = list(A=contr,B=contr,C=contr,D=contr,L=contr))
+ summary.aov(lm.3)
+
+# L            1    7.6     7.6
+# A            1 1870.6  1870.6
+# B            1   39.1    39.1
+# C            1  390.1   390.1
+# D            1  855.6   855.6
+# A:B          1    0.1     0.1
+# A:C          1 1314.1  1314.1
+# B:C          1   22.6    22.6
+# A:D          1 1105.6  1105.6
+# B:D          1    0.6     0.6
+# C:D          1    5.1     5.1
+# A:B:C        1   14.1    14.1
+# A:B:D        1   68.1    68.1
+# A:C:D        1   10.6    10.6
+# B:C:D        1   27.6    27.6
+
+#############################################################
+
+# Q7: Write code to produce all of the effects in the last model above.
+# Why is there an NA for the effect ABCD; i.e., why is ABCD not estimable?
+
+# Soln7:
+
+ eff = 2*lm.3$coef
+ eff = eff[2:length(eff)]
+ as.matrix(eff,col=1)
+
+# L1           18.625        
+# A1           21.625
+# B1            3.125
+# C1            9.875
+# D1           14.625
+# A1:B1         0.125
+# A1:C1       -18.125
+# B1:C1         2.375
+# A1:D1        16.625
+# B1:D1        -0.375
+# C1:D1        -1.125
+# A1:B1:C1      1.875
+# A1:B1:D1      4.125
+# A1:C1:D1     -1.625
+# B1:C1:D1     -2.625
+# A1:B1:C1:D1      NA     
+
+ABCD is NA because it's confounded with block. I'll explain this more later.
+
+##########################################################
+
+# Now consider example 8.1, which is a  2^{4-1} with ABCD=1
+
+   rm(list=ls(all=TRUE))
+
+# Here is one way to impose the defining relation in the model:
+
+   # Make +/- table for THREE (Not 4) factors:
+   design = gen.factorial(2,4-1,varNames=c("A","B","C")) # , factors="all") 
+   attach(design)
+   design
+   D = A*B*C    # generate the dropped factor by "solving" for D in ABCD=1 
+
+   A = as.factor(A)
+   B = as.factor(B)
+   C = as.factor(C)
+   D = as.factor(D)
+
+#   Here is the data that goes along with the above design, and the model:
+
+   y = c(45,100,45,65,75,60,80,96) 
+   contr = as.character("contr.helmert")
+   lm.4 = lm(y~A*B*C*D, contrasts = list(A=contr,B=contr,C=contr,D=contr))
+
+#   And the effects are:
+   
+   eff = as.matrix(2*lm.4$coefficients)
+   eff
+
+# Last Q: Explain the NA's appearing in the effects.
+
+# (Intercept) 141.5   # Table 8.4, p.296
+# A1           19.0
+# B1            1.5
+# C1           14.0
+# D1           16.5
+# A1:B1        -1.0
+# A1:C1       -18.5
+# B1:C1        19.0
+# A1:D1          NA   because AD = BC
+# B1:D1          NA
+# C1:D1          NA
+# A1:B1:C1       NA
+# A1:B1:D1       NA
+# A1:C1:D1       NA
+# B1:C1:D1       NA
+# A1:B1:C1:D1    NA
+
+# Soln: With ABCD= 1, AD is aliased with BC, which already appears in the output.
+# Etc.

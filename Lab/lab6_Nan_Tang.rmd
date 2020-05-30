@@ -1,0 +1,128 @@
+---
+title: "QUIZ/LAB 6"
+author: "Your Name"
+date: "November 8, 2019"
+output: html_document
+---
+
+(The actual questions are in *italic*)
+
+In this lab we are going to study something called a dispersion effect.  The following code, which you can cut/paste from lab6_supp.txt, reads in the data corresponding to the design shown in the figure:
+
+RUN THIS CODE BLOCK
+```{r}
+#install.packages('AlgDesign')
+library(AlgDesign)           # for gen.factorial()
+rm(list=ls(all=TRUE))
+design = gen.factorial(2,4,varNames=c("A","B","C","D"), factors="all")
+attach(design)
+y = c(5,11,3.5,9,.5,8,1.5,9.5,6,12.5,8,15.5,1,6,5,5)
+cbind(design,y) 
+```
+
+*a) Write code to identify the "significant" effects using Daniel's method.*
+```{r}
+contr = as.character("contr.helmert")
+lm1 = lm(y~A*B*C*D, contrasts = list(A=contr,B=contr,C=contr,D=contr))
+summary(lm1)
+eff <- 2 * lm1$coefficients
+eff <- eff[2:length(eff)]
+as.matrix(eff,col=1) 
+
+qqnorm(eff)
+abline(median(eff),1.4, col=2) 
+
+
+# From the qqplot, we can see A has largest effect while C has 'smallest' effect, because they are out of the linear pattern. 
+```
+
+*b) Develop an additive model consisting of the (two) significant factors only, and*
+*- perform the anova decomposition,*
+*- find the residuals (you'll need these in the following parts, so store them in an array called resid),*
+*- make a qqplot of the residuals.*
+
+```{r}
+# make sure to call your vector/array of residuals resid
+lm2 <- lm(y~A+C)
+summary.aov(lm2)
+## SSA = 132.25, SSC = 72.25, SSE = 59.44
+resid <- y - predict(lm2)
+qqnorm(resid)
+
+```
+
+*c) The square of the slope of the qq-plot made in the previous part is supposed to be an estimate of another quantity which you have produced in the previous part. What is that quantity? Confirm that the two quantities are numerically close.*
+
+```{r}
+qqnorm(resid)
+abline(median(resid), 2.1)
+
+## square of the slope is approximately equal to MSE in additive model of A and C
+```
+
+For the rest of the lab, we need to generate the +/- Table for all *four* factors. There are many ways of doing that, but let's do it this way. The following lines of code convert the factors into numerical arrays taking -1 and +1 values:
+
+RUN THIS CODE BLOCK
+```{r}
+A = 2*as.numeric(A) - 3
+B = 2*as.numeric(B) - 3
+C = 2*as.numeric(C) - 3
+D = 2*as.numeric(D) - 3
+```
+
+*d) Write code to generate all of the other columns in the +/- table (excluding the I column). Call them AB, ... ABC, ... ABCD. Hint: there are six 2-factor columns, four 3-factor columns, and one 4-factor column, for a total of 15 columns. Use the "magical property" of +/- tables. Warning: this is a bit tedious.*
+```{r}
+AB <- A*B
+AC <- A*C
+AD <- A*D
+BC <- B*C
+BD <- B*D
+CD <- C*D
+ABC <- A*B*C
+ABD <- A*B*D
+ACD <- A*C*D
+BCD <- B*C*D
+ABCD <- A*B*C*D
+cbind(A,B,C,D,AB,AC,AD,BC,BD,CD,ABC,ABD,ACD,BCD,ABCD)
+```
+
+Now, return to the 2-factor additive model we made above, and recall that even though there are only 2 factors in the model, the problem still involves 4 factors, i.e., 2^4 = 16 runs. This is evident in the number of residuals you have found - 16. Also, recall that the variance of these residuals within each of the 16 treatment level combinations is supposed to be the same, or at least comparable. If/when that variance in some treatment level combination is different from the rest, one says that there exists a dispersion effect. This is important information because it tells you which factors contribute most to the variance of the residuals, i.e., which factors are trouble-makers. It turns out that there is a lot of work done on this topic, and one of the results is that the ratio of the variances across different levels plays an important role. For example, it can be shown that the following statistic is supposed to have a normal distribution under the null hypothesis that the two true variances are equal:
+```{r}
+ZA = log( var(resid[A==+1]) / var(resid[A==-1]) )
+```
+
+*e) Write code to compute that statistic for all 15 columns of the +/- table, and combine them into a data.frame called Z. Hint: some of this can be cut/paste from lab6_supp.*
+```{r}
+# visit https://www.stat.washington.edu/marzban/421/autumn19/lab6_supp.txt
+# copy and paste 11 of the 15 columns
+# write the remaining 3 yourself
+ZB <- log(var(resid[B==+1])/ var(resid[B==-1]))
+ZC <- log(var(resid[C==+1])/ var(resid[C==-1]) )
+ZD <- log(var(resid[D==+1])/ var(resid[D==-1]))
+
+ ZAB = log( var(resid[AB==+1]) / var(resid[AB==-1]) )
+ ZAC = log( var(resid[AC==+1]) / var(resid[AC==-1]) )
+ ZAD = log( var(resid[AD==+1]) / var(resid[AD==-1]) )
+ ZBC = log( var(resid[BC==+1]) / var(resid[BC==-1]) )
+ ZBD = log( var(resid[BD==+1]) / var(resid[BD==-1]) )
+ ZCD = log( var(resid[CD==+1]) / var(resid[CD==-1]) )
+
+ ZABC = log( var(resid[ABC==+1]) / var(resid[ABC==-1]) )
+ ZABD = log( var(resid[ABD==+1]) / var(resid[ABD==-1]) )
+ ZACD = log( var(resid[ACD==+1]) / var(resid[ACD==-1]) )
+ ZBCD = log( var(resid[BCD==+1]) / var(resid[BCD==-1]) )
+
+ ZABCD = log( var(resid[ABCD==+1]) / var(resid[ABCD==-1]) )
+
+  Z = data.frame(ZA, ZB, ZC, ZD, ZAB, ZAC, ZAD, ZBC, ZBD, ZCD, ZABC, ZABD, ZACD, ZBCD, ZABCD )
+
+```
+
+*f) Which effect is inconsistent with normality? Support your answer with code.*
+```{r}
+qqnorm(Z)
+## from the qqplot, we see the one with highest Z value are out of linear pattern 
+inconsistent_effect <- as.array(names(Z))[Z==max(Z)]
+inconsistent_effect
+## B effect is inconsistent with normality, therefore, we may conclude B factor is violating the equal variance assumption. 
+```

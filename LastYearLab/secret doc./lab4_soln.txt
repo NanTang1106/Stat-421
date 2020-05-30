@@ -1,0 +1,102 @@
+
+In this lab you'll learn how to run CRD, RCBD, and LSD models in R. We also learn some other important/cool things.
+
+The following data (from exercise 4.23) can be cut/paste from lab4_supp.txt on the course website. The problem itself is shown here. Study the following code:
+
+   p = 4
+
+   y.m = matrix(nrow=p,ncol=p)
+   y.m[1,]=c(10, 14, 7,  8)
+   y.m[2,]=c(7,  18, 11, 8)
+   y.m[3,]=c(5,  10, 11, 9)
+   y.m[4,]=c(10, 10, 12, 14)
+
+   y = as.vector(t(y.m))
+   A = as.factor(c(rep(1:p,each=p)))        # row-factor (Order of Assembly).
+   B = as.factor(c(3, 4, 1, 2,              # Treatment factor, according to Latin Square.
+                   2, 3, 4, 1,       
+                   1, 2, 3, 4,
+                   4, 1, 2, 3)) 
+   C = as.factor(rep(c(1:p),p))             # col-factor (Operator).
+
+   cbind(A,B,C,y)                           # Always, visually confirm data are correct.
+
+   lm.1 = lm(y~A+B+C)
+   summary.aov(lm.1)
+
+#             Df Sum Sq Mean Sq F value  Pr(>F)   
+# A            3   18.5   6.167   3.524 0.08852 
+# B            3   72.5  24.167  13.810 0.00421 
+# C            3   51.5  17.167   9.810 0.00993
+# Residuals    6   10.5   1.750                   
+
+The small p-value (0.00421) suggests that the treatmeant has an effect on the response.  And that means that at least 2 of the 4 means are different. But it's always a good idea to check the results of an ANOVA F-test with some graphics. In this case,
+
+a) Write code to make a comparative boxplot that visually checks for a treatment effect.
+
+   boxplot(y[B==1], y[B==2], y[B==3], y[B==4])
+
+b) Based on your answer to part a, which treatment factor level is most different from the other treatment factor levels.
+
+The 3rd one has unambigeously high response values.
+
+FYI, you can look at the following as well, even though we're not really interested in them:
+    boxplot(y[A==1], y[A==2], y[A==3], y[A==4])
+    boxplot(y[B==1], y[B==2], y[B==3], y[B==4])
+
+Even though we don't really care about the effect of the row and column factors, and even though those tests should be treated cautiously, according to the ANOVA table, the column factor (Operator) appears to have an effect on response as well.
+
+c) To make sure that the column factor has an effect, develop a model that involves only the column factor, and report the p-value of the F-test.
+
+   lm.1 = lm(y~C)
+   summary.aov(lm.1)
+
+#             Df Sum Sq Mean Sq F value Pr(>F)
+# C            3   51.5  17.167    2.03  0.164
+# Residuals   12  101.5   8.458               
+
+I think you'll find that the p-value is large, and so there is no evidence that the mean response varies across operators. This conclusion is clearly in contradiction with that in part b. These things happen in real data, and it's best to get used to them!  However, it's also good to try to "explain" the contradiction. You can check the assumptions, etc. But there is one more thing to worry about, next: 
+
+As I have said (repeatedly), when we do parametric tests (like the F-test), it's good to think of a randomization test because it reveals hidden issues. For example, in this problem suppose we actually wanted to do a randomization test of the treatment factor.  We would have to randomly assign the treatment factor levels to the same observed data, and then compute SS_tr for each possible random assignment. That would give us the empirical sampling distribution (technically, the randomization distribution) of SS_tr, and by placing the observed SS_tr on that distribution we would find a p-value.  One complication is that we would have to assure that each of the random assignments is itself a Latin Square (LS)!  In other words, the "randomization space" must consist of all LSs. That's not a big problem, because we know that we can generate one LS from another by switching rows or columns.  Anyway, don't worry, we won't do all of that. Instead, 
+
+d) Consider ONLY ONE alternative "random" assignment of the treatment factor levels to the observed data, consistent with a LSD, and produce the anova table. 
+
+   B = as.factor(c(3, 1, 4, 2,                  # switching middle 2 cols
+                   2, 4, 3, 1,  
+                   1, 3, 2, 4,
+                   4, 2, 1, 3))
+
+   B = as.factor(c(1, 2, 3, 4,                  # Or the standard LS
+                   2, 3, 4, 1,                  
+                   3, 4, 1, 2,
+                   4, 1, 2, 3))
+
+   lm.1 = lm(y~A+B+C)
+   summary.aov(lm.1)
+
+#             Df Sum Sq Mean Sq F value Pr(>F)
+# A            3   18.5   6.167   0.471  0.713
+# B            3    4.5   1.500   0.115  0.948
+# C            3   51.5  17.167   1.312  0.354
+# Residuals    6   78.5  13.083         
+
+e) You will notice that even though the anova table is generally different from the one shown at the top of this quiz, the SS (and MS) for the row- and column-factors are the same. Based on the defining formula for SS_row and/or SS_col, explain that equality.
+
+The reason SS_row and SS_col don't change is that they are determined from the
+row- and col- marginals, which don't change because it's only the treatment factor
+that is randomly assigned to the various cells in the LS.
+
+# Morals: First, it is not surprising to find "contradictory" results from different models.
+# There are lots of explanations for why that may happen. First, note that a small p-value
+# from one model and a large p-value from another model does NOT constitute a contradiction.
+# In the case of the large p-value, the correct conclusion is that there is no evidence
+# for an effect. That's not the same thing as There is no effect. There are also other
+# reasons that can be explored by testing the assumptions of the F-test. 
+# In this case, i.e., in the context of an LSD, we find that SS_row and SS_col actually 
+# don't change across all randomizations consistent with LSD. As such, we cannot generate 
+# a (nontrivial) randomization distribution for SS_row, SS_col, or F = SS_row/SSE, etc. 
+# And without that, we cannot compute a p-value.  I.e., the randomization test cannot be 
+# done at all! This is why we keep saying that we should be cautious when looking at the 
+# row and col p-values from the the parametric approach (based on F).
+
+

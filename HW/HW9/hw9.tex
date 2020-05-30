@@ -1,0 +1,86 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,fullpage,graphicx}
+\usepackage{afterpage}
+
+\begin{document}
+\subsection*{Lect 25-2}
+\subsection*{a}
+\noindent Let A denotes factor operation, B denotes factor part. 
+\begin{verbatim}
+library(AlgDesign)
+design1 <- gen.factorial(c(3,2,10), varNames = c('Rep', 'Ope', 'Part'), factors = 'all')
+attach(design1)
+y <- c(50, 49, 50, 50, 48, 51, 52, 52, 51, 51, 51, 51, 53, 50, 50, 54, 52, 51,
+         49, 51, 50, 48, 50, 51, 48, 49, 48, 48, 49, 48, 52, 50, 50, 52, 50, 50, 
+         51, 51, 51, 51, 50, 50, 52, 50, 49, 53, 48, 50, 50, 51, 50, 51, 48, 49,
+         47, 46, 49, 46, 47, 48)
+lm1 <- lm(y~Ope*Part)
+MSA <- summary.aov(lm1)[[1]][1,3]
+MSB <- summary.aov(lm1)[[1]][2,3]
+MSAB <- summary.aov(lm1)[[1]][3,3]
+MSE <- summary.aov(lm1)[[1]][4,3]
+
+> summary.aov(lm1)
+            Df Sum Sq Mean Sq F value   Pr(>F)    
+Ope          1   0.42   0.417   0.278    0.601    
+Part         9  99.02  11.002   7.335 3.22e-06 ***
+Ope:Part     9   5.42   0.602   0.401    0.927    
+Residuals   40  60.00   1.500           
+
+> c(MSA, MSB, MSAB, MSE)
+[1]  0.4166667 11.0018519  0.6018519  1.5000000
+\end{verbatim}
+
+\subsection*{b}
+\begin{verbatim}
+a <- 2
+b <- 10
+n <- 3
+F_A <- MSA/MSAB
+F_B <- MSB/MSAB
+F_AB <- MSAB/MSE
+p_A <- pf(F_A, df1=a-1, df2=(a-1)*(b-1), lower.tail = F)
+p_B <- pf(F_B, df1=b-1, df2=(a-1)*(b-1), lower.tail = F)
+p_AB <- pf(F_AB, df1=(a-1)*(b-1), df2=a*b*n-a*b, lower.tail = F)
+
+> c(F_A, F_B, F_AB)
+[1]  0.6923077 18.2800000  0.4012346
+> c(p_A, p_B, p_AB)
+[1] 4.269057e-01 9.381063e-05 9.270089e-01
+\end{verbatim}
+
+\noindent For $H_0: \sigma_A^2 = 0$, F-ration is 0.6923077. With the null hypothesis, the p-value is $4.269057e-01$. This test result fails to provide significant evidence against null hypothesis. \\
+
+\noindent For $H_0: \sigma_B^2 = 0$, F-ration is 18.2800000, p-value is $9.381063e-05$, which provides significant evidence against the null hypothesis that $sigma_B^2 = 0$. \\
+
+\noindent For $H_): \sigma_{AB}^2 = 0$, F-ration is 0.4012346, and p-value is $9.270089e-01$, failed to provide strong evidence against the null. 
+
+\subsection*{c}
+\begin{verbatim}
+est_sigmaA <- 1/(n*b) * (MSA - MSAB)
+est_sigmaB <- 1/(n*a) * (MSB - MSAB)
+est_sigmaAB <- 1/n * (MSAB - MSE)
+est_sigmaE <- MSE
+
+> c(est_sigmaA, est_sigmaB, est_sigmaAB, est_sigmaE)
+[1] -0.00617284  1.73333333 -0.29938272  1.50000000
+\end{verbatim}
+
+\noindent $\hat{\sigma_A}^2 = -0.00617284$ \\
+$\hat{\sigma_B}^2 = 1.73333333$ \\
+$\hat{\sigma_{AB}}^2 =-0.29938272$ \\
+$\hat{\sigma_{\epsilon}}^2 =1.5$
+
+\subsection*{d}
+\begin{verbatim}
+ sigmaY <- var(y)
+ > sigmaY
+[1] 2.794068
+> sum(est_sigmaA, est_sigmaB, est_sigmaAB, est_sigmaE)
+[1] 2.927778
+\end{verbatim}
+
+\noindent Sum of estimated variances is approximately equal to variance of data. 
+
+\end{document}

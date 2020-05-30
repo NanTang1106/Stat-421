@@ -1,0 +1,154 @@
+# In this lab we will numerically demonstrate some of the claims made in 
+# the lecture. The main tool will be simulation of the type you did last week.
+
+# I have claimed that for if z_i, i=1,...,n are drawn from a standard
+# normal distribution, then the sum of their squares, i.e. X = sum_i (z_i)^2 , 
+# has a chi-squared distribution with df = n-1.
+
+# 1a) write code to draw 1000 samples of size n=10 from a standard normal 
+# distribution, and make a relative frequency histogram (i.e., check "freq=F" 
+# in the help pages for hist()) of the 1000 values of X.
+
+# 1b) Superimpose on the above histogram the theoretical chi-squared
+# pdf with df = n-1. Hint: the R function lines(u,v), following plot(x,y),
+# superimposes (u,v) on (x,y).
+
+# I have claimed that s1^2/s2^2 has an F-distribution with df = (d1,d2)
+# with d1=n1-1 and d2=n2-1, if the two populations have equal variances.  
+# We want to confirm parts of that claim through simulation.
+
+# 2a) Specifically, write code to draw 1000 samples of size n=100 from a normal 
+# distribution with mu1=3, sigma1=2, and an independent sample of size n=50 
+# from a normal distribution with mu2=2, sigma2=2, and make a relative frequency 
+# histogram of the 1000 values of s1^2/s2^2. 
+
+# 2b) Look on the web and find the formulas for the E[] and V[] for the 
+# F distribution. Compute that E[] and V[], and compare them with the mean 
+# and the variance, respectively, of the 1000 values of s1^2/s2^2 found in part 1a.  
+
+# 2c) Will the agreement in part 2b hold even if the two sigma's are unequal,
+# say 2.0 and 2.5?  Yes or no?  Use the code in part 1a) to answer this question. 
+
+#########################################################################
+
+# I also claimed that the y-intercept and slope of a normal qq-plot 
+# are estimates of the mean and standard deviation of the population, 
+# respectively. This allows one to visually check the agreement of two 
+# (or more) means and/or standard deviations. It turns out that the
+# qq plot is even more useful in that it can "detect" skewed distributions
+# as well. 
+
+# 3a) Take a sample of size 1000 from a normal distribution with mu=0, sigma=1,
+and plot the qqplot. Hint: Check the help pages on ?qqnorm().
+
+# 3b) Repeat 3a but with mu = 2, sigma = 1, and explain what changed in the qqplot.
+# Hint: the commands abline(h=0) and abline(v=0) may be helpful.
+
+# 3c) Repeat 3a but with mu = 0, sigma = 2, and explain what changed in the qqplot.
+
+# 3d) Take a sample of size 100 from an exponential distribution with lambda=1,
+# and plot the qqplot. 
+
+
+########################
+
+# Soln 
+
+# 1a)
+   nsim = 10000
+   n = 10
+   X = numeric(nsim)
+   for(i in 1:nsim){
+   z = rnorm(n,0,1)
+   X[i] = sum(z^2)
+   }
+   hist(X, freq=F)
+
+# 1b)
+
+   xx = seq(0,50,by=0.1)
+   lines(xx, dchisq(xx,df=n-1), col=2)
+
+# Moral: We just confirmed that the sum of the square of n standard
+# normal random variables follows the chi-squared distribution with df = n-1
+
+# 2a) 
+
+   sample.stats = numeric(1000)
+   for(i in 1:1000){
+   x1 = rnorm(n1,3,2)
+   x2 = rnorm(n2, 2,2)
+   sample.stats[i] = var(x1)/var(x2)
+   }
+   hist(sample.stats, freq = FALSE)
+   mean(sample.stats)                        # 1.045029 
+   var(sample.stats)                         # 0.07538085 
+
+# 2b)
+
+   n1 = 100
+   n2 = 50
+   d1 = n1 -1 ; d2 = n2 -1
+   d2/(d2-2)                                 # E[] = 1.042553 close to mean above/
+   2*d2^2*(d1+d2-2)/(d1*(d2-2)^2*(d2-4))     # V[] = 0.07124126 close to var above.
+
+# Moral: We just confirmed, numerically, that the sampling histogram of
+# s1^2/s2^2 has the same mean and variance as that of the F-distribution 
+# with df = (n1-1, n2-1) if the two pops have equal vars. 
+
+# 2c)
+
+   sample.stats = numeric(1000)
+   for(i in 1:1000){
+   x1 = rnorm(n1,3,2)
+   x2 = rnorm(n2, 2,2.5)
+   sample.stats[i] = var(x1)/var(x2)
+   }
+   hist(sample.stats, freq = FALSE)
+   mean(sample.stats)                        # 0.6660882   Not close to E[]
+   var(sample.stats)                         # 0.02737719  Not close to V[]
+
+# Moral: The fact that s1^2/s2^2 ~ F is relatively sensitive 
+# (intuitively speaking) with respect to violation of the equality 
+# of the two population variances. A difference of 0.5 in the sigmas leads to 
+# disagreement between the respective means and variances.
+  
+# 3a) 
+
+  x = rnorm(1000,0,1)
+  qqnorm(x)
+  abline(h=0)
+  abline(v=0)
+
+# 3b) 
+
+  x = rnorm(1000,2,1)
+  qqnorm(x) 
+  abline(h=0)
+  abline(v=0)
+
+# 3c) 
+
+  x = rnorm(1000,0,2)
+  qqnorm(x)
+  abline(h=0)
+  abline(v=0)
+
+# 3d) 
+
+  x = rexp(1000,1)
+  qqnorm(x)
+  abline(h=0)
+  abline(v=0)
+
+# Moral: The shape of a qqplot tells us about the shape of the underlying
+# distribution. We've already discussed what the slope and intercept of the
+# qqplot translate to. Now we can see that when a qq plot is curved up on 
+# both ends (U-shaped), the underlying distribution is right-skewed or 
+# right-tailed. A left-skewed or left-tailed distribution will lead to
+# a qqplot which turns down on both ends (dome-shaped). You may think
+# this is all useless, because we can always look at the shape of the
+# histogram itself to decide all of that. However, don't forget that the 
+# shape of a histogram depends on the bin size (or number of breaks); the
+# qqplot does not depend on anything like that.
+

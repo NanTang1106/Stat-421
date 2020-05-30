@@ -1,0 +1,165 @@
+# In this lab you learn how to run (1-way anova), including a block factor.
+# You will also learn how to do F-tests on each factor in the model, based
+# on the SSE of a full model and the SSE of a reduced model.
+
+# 1) Here is example 4.1 on page 127.
+
+# A medical device manufacturer produces vascular grafts (artificial veins). 
+# These grafts are produced by extruding billets of polytetraoroethylene (PTFE) 
+# resin combined with a lubricant into tubes. Frequently, some of the tubes in
+# a production run contain small, hard protrusions on the external surface. These 
+# defects are known as "flicks." The defect is cause for rejection of the unit.
+# The product developer responsible for the vascular grafts suspects that the 
+# extrusion pressure affects the occurrence of flicks and therefore intends to 
+# conduct an experiment to investigate this hypothesis. However, the resin is
+# manufactured by an external supplier and is delivered to the medical device 
+# manufacturer in batches. The engineer also suspects that there may be significant 
+# batch-to-batch variation, because while the material should be consistent with
+# respect to parameters such as molecular weight, mean particle size, retention, 
+# and peak height ratio, it probably isn't due to manufacturing variation at the 
+# resin supplier and natural variation in the material. Therefore, the product 
+# developer decides to investigate the effect of four different levels
+# of extrusion pressure on flicks using a randomized complete block design 
+# considering batches of resin as blocks.  Note that there are four levels of 
+# extrusion pressure (treatments) and six batches of resin (blocks). Remember 
+# that the order in which the extrusion pressures are tested within each block 
+# is random. The response variable is yield, or the percentage of tubes in the
+# production run that did not contain any flicks.
+
+   rm(list=ls(all=TRUE))
+   a = 4                           # number of treatment (i.e., pressure) levels.
+   b = 6                           # number of block (i.e., batch) levels.
+
+   y.m = matrix(nrow=a,ncol=b)     # rows = treatment, col = block
+   y.m = matrix(c(90.3, 89.2, 98.2, 93.9, 87.4, 97.9,
+                  92.5, 89.5, 90.6, 94.7, 87.0, 95.8,
+                  85.5, 90.8, 89.6, 86.2, 88.0, 93.4,
+                  82.5, 89.5, 85.6, 87.4, 78.9, 90.7),nrow=a,ncol=b,byrow=T)
+
+   y = t(y.m)
+   y = as.vector(y)
+  
+   AA = as.factor(c(1:b))           
+   BB = as.factor(c(1:a)) 
+   temp = expand.grid(AA,BB)       
+   A = temp[,2] ; B = temp[,1]   
+
+   lm.1 = lm( y ~ A + B )  
+   summary.aov(lm.1)   
+
+#             Df Sum Sq Mean Sq F value  Pr(>F)           Call this Table 1
+# A            3  178.2   59.39   8.107 0.00192
+# B            5  192.2   38.45   5.249 0.00553
+# Residuals   15  109.9    7.33                   
+
+# Note that a Block appears in the anova table just like another factor.
+# According to the small p-values for each of the factors, both factors
+# have a significant effect on the response (yield). We do have to be
+# a little carefull in interpreting the p-value associated with the
+# Block factor, because technically randomization has occured only
+# within each block, and not across the blocks. One often says "blocks
+# introduce a restriction on randomization." 
+
+#########################################################################
+
+# We want to understand where the SS terms and the F values in Table 1 come 
+# from.  Recall from lecture 11 that all SS and the resulting F values, 
+# for a given factor, are based on the comparison of a full model and a 
+# reduced model. For example, if testing the factor A, one develops the 
+# following models: 
+
+  summary.aov( lm(y ~ A) )                  # Full model for testing A
+  summary.aov( lm(y ~ 1) )                  # Reduced model
+
+#             Df Sum Sq Mean Sq F value Pr(>F)  
+# A            3  178.2   59.39   3.931 0.0234 *
+# Residuals   20  302.1   15.11                 
+
+#             Df Sum Sq Mean Sq F value Pr(>F)
+# Residuals   23  480.3   20.88               
+
+##########################################################################
+# Q1) From the above SSE values (i.e. the Residual SS values) of the 
+# full model AND the reduced model, write an algebraic expression that 
+# produces the F-value 3.931. Hint1: look at lecture 11. 
+# Hint2: For this problem the denominators in the forumal in Lecture 11
+# (page 3) are df_numer = (a-1) and df_denom = (a*b-a).
+
+# Soln:
+
+   SSE_mu_A = 302.1                                   # From full model for testing A
+   SSE_mu = 480.3                                     # From reduced model
+   df_numer = a-1
+   df_denom = a*b-a
+   ((SSE_mu - SSE_mu_A)/df_numer) / ((SSE_mu_A)/df_denom)     # F = 3.932473
+
+#  FYI: A similar analysis can be done for the B factor:
+
+   summary.aov( lm(y ~ B) )                  # Full model for testing B; F = 2.403
+   summary.aov( lm(y ~ 1) )                  # Reduced model 
+  
+   SSE_mu_B = 288.1
+   SSE_mu = 480.3 
+   df_numer = b-1
+   df_denom = a*b - b
+   ((SSE_mu - SSE_mu_B)/df_numer) / ((SSE_mu_B)/df_denom)     # F = 2.401666 
+
+###########################################################################
+
+# Q2) Write code to develop the full model and the reduced model whose SSE
+# values are used to produce the F values in Table 1. 
+# Hint: This time the numerator df will be (a-1) or (b-1), depending
+# on the factor; the denominator df is a*b-a-b+1, period.
+
+# Here is Table 1 again: 
+#             Df Sum Sq Mean Sq F value  Pr(>F)           Call this Table 1
+# A            3  178.2   59.39   8.107 0.00192
+# B            5  192.2   38.45   5.249 0.00553
+# Residuals   15  109.9    7.33
+
+   summary.aov( lm(y ~ A + B) )           # Full model for testing B; F = 2.403
+   summary.aov( lm(y ~ A) )               # Reduced model for testing B    
+   summary.aov( lm(y ~ B) )               # Reduced model for testing A
+
+#             Df Sum Sq Mean Sq F value  Pr(>F)   
+# A            3  178.2   59.39   8.107 0.00192 **
+# B            5  192.2   38.45   5.249 0.00553 **
+# Residuals   15  109.9    7.33                   
+ 
+#             Df Sum Sq Mean Sq F value Pr(>F)  
+# A            3  178.2   59.39   3.931 0.0234 *
+# Residuals   20  302.1   15.11        
+
+#             Df Sum Sq Mean Sq F value Pr(>F)  
+# B            5  192.2   38.45   2.403 0.0777 .
+# Residuals   18  288.1   16.00        
+
+# From the above output:
+   SSE_mu_A_B = 109.9
+   SSE_mu_A = 302.1
+   SSE_mu_B = 288.1
+   df_numer_a = a-1
+   df_numer_b = b-1
+   df_denom = a*b-a-b+1
+# Then
+   ((SSE_mu_B - SSE_mu_A_B)/df_numer_a) / ((SSE_mu_A_B)/df_denom)  # 8.10737
+   ((SSE_mu_A - SSE_mu_A_B)/df_numer_b) / ((SSE_mu_A_B)/df_denom)  # 5.246588
+
+########################################################################## 
+
+# All of these conditional SS values can be written in terms of conditional
+# R values, e.g., R(A|mu) R(B|mu,A), etc. where R(E|F) is the reduction in 
+# variance brought about by the inclusion (in the model) of the factor E, 
+# after the variance explained by the factor F has been accounted for.
+
+# Moral: When R returns an F-ratio in summary(lm()), it is in fact running 
+# two lm's (full and reduced) and comparing their SSE.  You can confirm that
+# the values reported in summary.aov() are different conditional R(E|F). E.g.,
+
+  summary.aov(y ~ A + B)     
+
+#               Df Sum Sq )   
+# A            3  178.2   = R(A | mu)
+# B            5  192.2   = R(B | mu, A)
+# Residuals   15  109.9   = SSE(mu, A, B)
+

@@ -1,0 +1,153 @@
+---
+title: "Lab 4, STAT 421"
+author: "Your Name"
+date: "October 25, 2019"
+output: html_document
+---
+
+In this lab we will study how paired and unpaired tests perform on data that come from a paired or unpaired design. Similarly, How
+will an RCBD model and a CRD model perform on data that come from a blocked or unblocked design.
+
+**Part I: paired design**
+
+The following shows data involving 10 replications and 2 treatment levels.
+
+RUN THIS CODE TO GET DATA
+```{r}
+m1 <- matrix(c(
+  -0.81999710, 0.22742892,
+  -0.30480608, 0.35610755,
+   1.42962572, 2.10885616,
+   0.04397367, 0.59347249,
+   0.25030395, 0.50172424,
+   1.27207265, 2.57120450,
+   0.33792280, 1.06056830,
+  -0.79328020, -1.17277813,
+  -0.82628930, -0.01263340,
+  -0.32865818, -0.04009693),
+  ncol=2, byrow=T)
+```
+
+*a) Write code to perform a paired, 2-sample, 2-sided t-test for the equality of two means, and report the p-value. All by hand.*
+
+You may copy/paste this data from lab4_supp.txt on the course website. (Data in code block above)
+Also, it's best to work with the transpose of ym, i.e., t(ym) because then the rows (cols) correspond to treatment (block) levels, just as in the lecture notes. The paired test was described on page 3 of lecture 10.
+
+```{r}
+# write code here
+n = 10
+diff <- m1[,1] - m1[,2]
+diff_mean <- mean(diff)
+diff_sd <- sd(diff)
+diff_se <- diff_sd / sqrt(n)
+t <- diff_mean / diff_se
+t
+p_val <- 2 * pt(t, df=n-1)
+p_val
+```
+
+*b) Write code to confirm that you get the same answer with t.test(), i.e. By R.*
+```{r}
+# write code here
+t.test(m1[,1], m1[,2], paired = TRUE, alternative = "two.sided")
+```
+
+*c) Write code to perform a pooled (un-paired) 2-sample, 2-sided, t-test for the equality of two means, and report the p-value. All by hand. The pooled test was described on page 2 of lect6.*
+```{r}
+# write code here
+n1 = 10
+n2 = 10
+y1_mean <- mean(m1[,1])
+y2_mean <- mean(m1[,2])
+sd_pool <- sqrt((var(m1[,1])*(n1-1) + var(m1[,2])*(n2-1)) / (n1 + n2 - 2))
+se_pool <- sd_pool * sqrt(1/n1 + 1/n2)
+t <- (y1_mean - y2_mean) / se_pool
+t
+p_val <- 2 * pt(t, df=(n1+n2-2))
+p_val
+```
+
+*d) Write code to confirm that you get the same answer with t.test(), i.e. By R.*
+```{r}
+# write code here
+t.test(m1[,1], m1[,2], paired = FALSE, var.equal = T, alternative = "two.sided")
+```
+
+Hopefully, what you get is that the paired test did find a difference between means, while the unpaired test did not. That suggests that the data themselves are probably paired to begin with.  So, let's see what happens if we perform the above paired and unpaired tests but this time on data that are NOT paired. We can assure that there is no pairing of data by shuffling the observations in one of the treatment levels. To that end,
+
+*e) Run the following lines of code, which simply shuffle the 10 observations in the first treatment level. Then, perform the paired and the unpaired tests again using t.test(), i.e. By R.*
+```{r}
+# please use this seed
+set.seed(1)
+# use sample() to shuffle data; depending on how you have assigned m1, you may need to transpose
+m1[,1] = sample(m1[,1], 10, rep=F)
+
+# write your code below
+p_val_paired <- t.test(m1[,1], m1[,2], paired = TRUE, alternative = "two.sided")[[3]]
+p_val_unpair <- t.test(m1[,1], m1[,2], paired = FALSE, var.equal = TRUE, alternative = "two.sided")[[3]]
+p_val_paired
+p_val_unpair
+
+```
+
+**Part II: Blocked design**
+
+RUN THIS CODE TO GET DATA
+```{r}
+m2 = matrix(c(
+      -0.59202694, -0.3767678,  0.8443820,
+      -0.21674643,  0.1808717,  0.8687569,
+      1.34481810,  1.8833581,  2.7893897,
+      -0.07152793,  0.5259091,  1.2499716,
+      -0.08923144,  0.7562869,  1.2076560,
+      1.55579083,  1.6650394,  3.2499003,
+      0.69645681,  0.8328382,  1.3065671,
+      -1.47464433, -0.2128512, -0.4790002,
+      -0.80495557, -0.3655731,  0.6798400,
+      -0.23129626,  0.2147767,  0.2248684),
+      ncol = 3, byrow=T) 
+```
+
+Now, we're going to repeat the above (the "By R" only), but in a problem involving a=3 treatment levels.  The data for that design is also in lab4_supp.txt; cut/paste it into R. Specifically,
+
+
+*f) Write code to compute the p-value of the treatment effect in an RCBD model, wherein the replications are blocked. By R.*
+```{r}
+# write code here
+a = 3
+b = 10
+y <- as.vector(m2)
+A <- as.factor(rep(c(1:a), each=b))
+B <- as.factor(rep(c(1:b), times=a))
+
+result1 <- summary.aov(lm(y~A+B))[[1]]
+p_val_treat <- result1$`Pr(>F)`[1]
+p_val_treat
+
+```
+
+*g) Write code to compute the p-value of the treatment effect in a CRD model. By R.*
+```{r}
+# write code here
+result2 <- summary.aov(lm(y~A))
+p_val_treat2 <- result2[[1]][1,5]
+p_val_treat2 
+```
+
+*h) Use the same shuffling trick we performed above, to destroy any blocking effect.  And repeat parts f and g.*
+```{r}
+# please use this seed
+set.seed(1)
+
+# write code here
+m2[,1] = sample(m2[,1], 10, rep=F)
+
+p_val_RCBD <- summary.aov(lm(y~A+B))[[1]]$`Pr(>F)`[1]
+p_val_RCBD
+
+p_val_CRD <- summary.aov(lm(y~A))[[1]][1,5]
+p_val_CRD
+
+```
+
+

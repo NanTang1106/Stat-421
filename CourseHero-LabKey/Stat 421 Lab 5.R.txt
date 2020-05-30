@@ -1,0 +1,249 @@
+
+   # example 5.1 pages 171 - 174   
+   rm(list=ls(all=TRUE))
+   a = 3
+   b = 3
+
+   AA = as.factor(c(1:a))
+   BB = as.factor(c(1:b))
+   temp = expand.grid(AA,BB)  # expand.grid = useful in factorial designs.
+   design = rbind(temp, temp, temp, temp)  # 4 times for n = 4.
+
+   A = design[,2] ; B = design[,1]   # A = material type, B = temperature,
+                                     # to agree with order in Table 5.5
+
+   y = c(130,  34,   20,  150,  136,  25,  138,  174,  96, 
+         155,  40,   70,  188,  122,  70,  110,  120,  104, 
+         74 ,  80,   82,  159,  106,  58,  168,  150,  82, 
+         180,  75,   58,  126,  115,  45,  160,  139,  60 )  # Note the format.
+
+    lm.1 = lm(y ~ A + B + A*B)
+
+    summary.aov(lm.1)               # Compare with Table 5.5 
+
+# Note that both treatment factors, and the interaction term are significant.
+
+######################
+
+# Q1a) According to the above result, at least two of the treatment effects 
+# in A are nonzero. Identify them. 
+# Q1b) Same for B.
+
+# Soln:    
+    tuk.1 = TukeyHSD(aov(lm.1), conf.level=0.95)   # 1 point for doing tukey
+    tuk.1
+   
+# $A
+#        diff       lwr      upr     p adj    
+# 2-1 25.16667 -1.135677 51.46901 0.0627571  
+# 3-1 41.91667 15.614323 68.21901 0.0014162 
+# 3-2 16.75000 -9.552344 43.05234 0.2717815
+
+# In A, 2 and 1 are different                       # 1 point for interpreting tukey
+# In A, 3 and 1 are different.
+
+# $B
+#        diff       lwr       upr     p adj     
+# 2-1 -37.25000  -63.55234 -10.94766 0.0043788 
+# 3-1 -80.66667 -106.96901 -54.36432 0.0000001 
+# 3-2 -43.41667  -69.71901 -17.11432 0.0009787
+
+# For B, all 3 levels have different effects.
+
+#############################################################################
+##### The following is not part of the quiz, but was discussed in the lecture.
+##### First, note that we can use tukey on the interaction terms too:
+
+# $`A:B`
+#            diff         lwr        upr     p adj
+# 2:1-1:1   21.00  -40.823184  82.823184 0.9616404 
+# 3:1-1:1    9.25  -52.573184  71.073184 0.9998527
+# Etc.
+# 3:3-1:3   28.00  -33.823184  89.823184 0.8347331
+# 3:3-2:3   36.00  -25.823184  97.823184 0.5819453
+
+# Recall that Tukey's test compares the difference in 2 sample means 
+# with a critical value. Note that the above differences (diff) are
+# in fact differences in 2 sample means:
+# $A
+  mean(y[A==2]) - mean(y[A==1])
+  mean(y[A==3]) - mean(y[A==1])
+  mean(y[A==3]) - mean(y[A==2])
+# $B
+  mean(y[B==2]) - mean(y[B==1])
+  mean(y[B==3]) - mean(y[B==1])
+  mean(y[B==3]) - mean(y[B==2])
+# $`A:B`
+  mean(y[A==2 & B==1]) - mean(y[A==1 & B==1])
+  mean(y[A==3 & B==1]) - mean(y[A==1 & B==1])
+# Etc.
+  mean(y[A==3 & B==3]) - mean(y[A==1 & B==3])
+  mean(y[A==3 & B==3]) - mean(y[A==2 & B==3])
+
+# As lectured in class, when interaction exists (and here, it does),
+# a significant difference between two means may be due to the
+# interaction, and not due to treatment. To fix that problem, all 
+# 2-sample tests between means at different levels of a treatement factor,
+# must be done at a specific value of the "other factor" (non-treatment
+# factor). None of the above Tukey's tests do that, and so, we have to
+# it "by hand."
+
+#  When B=2 (see p. 174), the three sample means are:
+   mean(y[A==1 & B==2])
+   mean(y[A==2 & B==2])
+   mean(y[A==3 & B==2])
+
+# And the relevant differences are
+
+   mean(y[A==3 & B==2]) - mean(y[A==1 & B==2])  # 88.5
+   mean(y[A==3 & B==2]) - mean(y[A==2 & B==2])  # 26
+   mean(y[A==2 & B==2]) - mean(y[A==1 & B==2])  # 62.5
+
+# The critical value of Tukey's statistic can be computed from qtukey()
+
+MSE = 675.213      # From anova, above, or 18230.75/27 = 675.213 from aov(lm.1)
+n = 4              # n = number of replicates
+se = sqrt(MSE/n)   # see p. 174
+qtukey(0.95, a, df = a*b*(n-1) )* se   # 45.557 ~ 45.47 in text.
+
+# Comparing the above differences with the critical value 45.47, we see 
+# that there is evidence that treatments A=1 and A=3 are different, and that 
+# A=1 and A=2 are different. But there is no evidence that A=2 and A=3 
+# are different.  All of these conclusions are when B=2.  
+# One must now repeat the above for B=1 and B=3. I'll leave that to you!
+
+############################################################################
+############################################################################
+
+   # example 5.5
+
+   rm(list=ls(all=TRUE))
+#  install.packages("AlgDesign")
+   library(AlgDesign)           # for gen.factorial()
+
+   design = gen.factorial(3,2,varNames=c("A","B"), factors="all")
+   design = rbind(design,design)                # n=2 replicates
+   attach(design) 
+   y = c(-2,0,-1, -3,1,5, 2,4,0,  -1,2,0, 0,3,6, 3,6,-1)
+
+   ################ Effects by hand #######################
+
+   mean(y[A==1]) - mean(y)         # -1.50
+   mean(y[A==2]) - mean(y)         #  1.33
+   mean(y[A==3]) - mean(y)         #  0.166666
+
+   mean(y[B==1]) - mean(y)         # -1.66666
+   mean(y[B==2]) - mean(y)         #  0.66666
+   mean(y[B==3]) - mean(y)         #  1.0
+
+##################
+# Q2: Compute the estimates of the interaction term, use the formulas developed 
+# in class (in terms of conditional means)
+
+# Soln:                          # 3 points  
+                                 
+   mean(y[A==1 & B==1]) - mean(y[A==1]) - mean(y[B==1]) + mean(y)  #  0.333
+   mean(y[A==1 & B==2]) - mean(y[A==1]) - mean(y[B==2]) + mean(y)  # -2.00
+   mean(y[A==1 & B==3]) - mean(y[A==1]) - mean(y[B==3]) + mean(y)  #  1.666
+
+   mean(y[A==2 & B==1]) - mean(y[A==2]) - mean(y[B==1]) + mean(y)  #  0
+   mean(y[A==2 & B==2]) - mean(y[A==2]) - mean(y[B==2]) + mean(y)  # -1.333
+   mean(y[A==2 & B==3]) - mean(y[A==2]) - mean(y[B==3]) + mean(y)  #  1.333
+
+   mean(y[A==3 & B==1]) - mean(y[A==3]) - mean(y[B==1]) + mean(y)  # -0.333
+   mean(y[A==3 & B==2]) - mean(y[A==3]) - mean(y[B==2]) + mean(y)  #  3.333
+   mean(y[A==3 & B==3]) - mean(y[A==3]) - mean(y[B==3]) + mean(y)  # -3.0
+
+########################################################################## 
+
+################### Effects by ANOVA ####################
+
+   contr = as.character("contr.sum")
+   lm.anova = lm(y ~ A + B + A*B, contrasts = list(A=contr,B=contr)) 
+   (lm.anova)$coeff         
+
+# (Intercept)            A1            A2            B1            B2 
+# 1.333333e+00 -1.500000e+00  1.333333e+00 -1.666667e+00  6.666667e-01 
+#        A1:B1         A2:B1         A1:B2         A2:B2 
+# 3.333333e-01  3.304186e-16 -2.000000e+00 -1.333333e+00 
+
+# These coeffs should be = effects and interactions computed by hand, above.
+# And they are!
+
+   summary.aov(lm.anova)            # Table 5.17 p. 194
+
+#             Df Sum Sq Mean Sq F value  Pr(>F)   
+# A            2  24.33  12.167   8.423 0.00868 **
+# B            2  25.33  12.667   8.769 0.00770 **
+# A:B          4  61.33  15.333  10.615 0.00184 **
+# Residuals    9  13.00   1.444                       Note: MSE = 1.444
+
+###################################################################
+###################################################################
+
+# Example 5.6 on page 199 does anova on a 3X2-factorial design with
+# in an RCBD with 1 block:
+# Treatment A: Filter Type (2 levels)
+# Treatment B: Ground clutter (3 levels)
+# Block 1: Operator (4 levels)
+
+ rm(list=ls(all=TRUE))
+ na = 3
+ nb = 2
+ nc = 4
+
+   y.m = matrix(nrow=na,ncol=nb*nc)      # rows = factor, col = replicates
+   y.m[1,]=c(90, 86,  96, 84, 100, 92, 92, 81)
+   y.m[2,]=c(102, 87, 106, 90, 105, 97, 96, 80)
+   y.m[3,]=c(114, 93, 112, 91, 108, 95, 98, 83)
+   y = as.vector(t(y.m))
+
+########################################################################
+# Q3a): Consult the image provided to define the correct encoding for
+# the factors A, B, and C.            
+
+# Soln:                 # 2 points total.
+
+# According to the figure provided, the first line of y-values corresponds
+# to ground_clutter = low. Meanwhile, in going from 90 to 86, Filter type
+# is changing. Then, as we go from (90,86) to (96,84), the Operator is
+# changing. All of this means the following A, B, and C:
+
+   A = as.factor(c(rep(1:na,each=nb*nc)))         # grnd clutter
+   B = as.factor(rep(c(1,nb),12))                 # filter type
+   C = as.factor(rep(rep(1:nc,each=nb),na))       # operator (block)
+
+########################################################################
+# Q4a): Write code to run the full model.
+
+# Soln:                # 1 point for writing a line of code that works!
+ 
+   lm.1 = lm(y~A+B+C+A*B)
+
+# Q4b): Are all of the effects significant?
+
+# Soln:                # 2 points  
+                       
+   summary.aov(lm.1)
+
+#             Df Sum Sq Mean Sq F value   Pr(>F)       Compare with Table 5.22
+# A            2  335.6   167.8  15.132 0.000253 ***
+# B            1 1066.7  1066.7  96.192 6.45e-08 ***
+# C            3  402.2   134.1  12.089 0.000277 ***
+# A:B          2   77.1    38.5   3.476 0.057507 .
+# Residuals   15  166.3    11.1
+
+# Each of the p-values tests the hypothesis that the corresponding
+# effect is zero. For example, 0.000253 suggests that the main effect of
+# treatment A is significant, i.e., that there is evidence from data
+# that tau_A is nonzero. As such, there is evidence that all of the effects
+# are nonzero; the exception is the interaction effect, where with a p-value
+# of 0.057507, it does not pass the test at alpha=0.05. As such, at alpha=0.05,
+# there is insufficient evidence from data to suggest that there is
+# no interaction in the data.
+
+# Also notice that although R produces a p-value for each and every
+# one of the factors, including C (i.e., operator = block factor), 
+# the results in the book, Table 5.22 (p 200), do not include that test, 
+# because C is a block factor. The reason for that ommission is the 
+# restriction on randomization that occurs in a blocked design.

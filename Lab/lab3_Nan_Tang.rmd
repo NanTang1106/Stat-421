@@ -1,0 +1,124 @@
+---
+title: "lab3_421_template"
+author: "Your Name"
+date: "October 11, 2019"
+output: html_document
+---
+
+QUIZ/LAB 3 (The actual questions are in *italic*)
+
+In this lab we are going to play with 1-way ANOVA. First, we get practice in using **lm()** for doing it, then we will look at effects, and finally we will "prove," via simulation,  a result from Wednesday's lecture: $E[MSTr] = \sigma^2 + (n/(a-1)) * \sum( (\tau_i)^2 )$ .
+
+
+a) *Write code to take a=4 samples of size n=100 from a normal dist with sigma = 1, but with mu1 = 0, mu2 = 0.5, mu3 = 1.0, and mu4 = 0.5; and then, do 1-way ANOVA on the resulting data. The answer here will be the ANOVA table showing all the SS values, the F ratio, and the corresponding p-value. Use lm(), i.e., DO NOT use the basic formulas we have derived for the different SS's.*
+*Start your code with set.seed(123)*
+
+```{r}
+# write your code here
+set.seed(123)
+a = 4
+n = 100
+y_m <- matrix(nrow=a, ncol=n)
+y_m[1,] = rnorm(100, 0, 1)
+y_m[2,] = rnorm(100, 0.5, 1)
+y_m[3,] = rnorm(100, 1, 1)
+y_m[4,] = rnorm(100, 0.5, 1)
+
+A <- as.factor(rep(c(1, 2, 3, 4), each=n))
+y <- as.vector(y_m)
+pool_dt <- data.frame(A, y)
+
+lm_1 <- lm(y~A)
+summary.aov(lm_1) # F-statistics is 0.738
+
+aov(y~A) # SStr = 2.3792, SSe = 425.2842
+
+```
+
+
+Let's also check the effects, i.e., tau_i. Let y denote the (n x a) data matrix. Then, our estimate of tau_i is given by (yi._bar - y.._bar ). Call them tau_i_hat. That's just a=4 numbers.
+
+  tau_i_hat = apply(y,2,mean) - mean(y)     # -0.42636942 -0.12432213  0.60368978 -0.05299824
+
+But we can also do something more useful: Make an (n x a) matrix such that its column means are those 4 numbers. To that end,
+
+
+```{r}
+# space to experiment
+y_new = t(y_m)
+tau_i_hat = apply(y_new,2,mean) - mean(y_new)
+```
+
+b) *Write code to subtract the row mean from every of row of y. Call the resulting matrix tau_i . Hint: if/when you have done it correctly, the 100 row means (i.e., apply(tau_i, 1, mean) ) will be nearly zero; and the column means will be the 4 numbers you saw, above, for the effect.*
+
+```{r}
+# write your code here
+y_new = t(y_m)
+row_mean = apply(y_new, 1, mean)
+tau_i = y_new - row_mean
+
+```
+
+c) *Write code to perform t-tests on each of the 4 columns of tau_i to test whether the true mean of each column is zero. Report the p-values.*
+
+```{r}
+# write your code here
+p_values = numeric(a)
+for (i in 1:a) {
+  p_values[i] = t.test(tau_i[,i])$p.value
+}
+p_values
+
+```
+
+d) *At* $\alpha = 0.05$*, are the results of the 4 tests in part c consistent with that of the ANOVA F-test? Explain.*
+
+WRITE YOUR EXPLANATION HERE
+
+Base on the one-way F-test, the p-value of onserved F-statistics is 0.53, which, under alpha level of 0.05, is not a strong evidence against H0. This implies F-test fail to provide evidence that difference in means exist. However, in part c, the p-value of level 1 and level 3 are smaller than alpha, providing the evidence that their mean is non-zero, while the test fail to provide evidence saying that mean of level 2 and 4 are non-zero. Therefore, based on part c, it is plausible that means are different. 
+
+
+e) *Write code to make the sampling distribution of MSTr across 10,000 trials.  This time, DO NOT use lm(); instead, use the defining formula for MSTr. Also, use only one set.seed(123) at the start of your code.*
+
+```{r}
+# write your code here
+set.seed(123)
+ntrial = 10000
+mstr_result = numeric(ntrial)
+a = 4
+n = 100
+
+for (i in 1:ntrial) {
+  y_m <- matrix(nrow=a, ncol=n)
+  y_m[1,] = rnorm(100, 0, 1)
+  y_m[2,] = rnorm(100, 0.5, 1)
+  y_m[3,] = rnorm(100, 1, 1)
+  y_m[4,] = rnorm(100, 0.5, 1)
+  grand_mean <- mean(as.vector(y_m))
+  row_mean <- apply(y_m, 1, mean)
+  sp_mstr <- 1/(a-1) * n * sum((row_mean - grand_mean)^2)
+  mstr_result[i] = sp_mstr
+}
+hist(mstr_result)
+
+```
+
+f) *Compute the mean (across the 10,000 trials) of MSTr, and show that it is approx. equal to*
+*( sigma^2 + (n/(a-1)) times sum( (tau_i)^2) ), where tau_i = mean(mu_i) - mu_i .*
+
+```{r}
+# write your code here
+
+mean(mstr_result)
+
+mu_i <- c(0, 0.5, 1, 0.5)
+
+tau_i <- mean(mu_i) - mu_i
+
+difference <- mean(mstr_result) - (1^2 + (n/(a-1)) * sum((tau_i)^2 ))
+difference 
+
+# Yes, these two values are very close
+
+```
+

@@ -1,0 +1,148 @@
+
+Quiz 5
+
+This lab/qz deals with GLSDs. Recall that a GLSD involves the juxtaposition of two orthogonal latin squares. The first (second) one consists of Greek (Latin) letters, hence the name GLSD. Also recall that the orthogonality is important because it leads to a decomposition of SST in terms of the SS of the factors in the model.  The following data comes from a hw problem (4.36), but I'm changing the LSD to make a point. Copy/paste the following data and code from the file lab5_supp.txt on the course website:
+
+   rm(list=ls(all=TRUE))
+   p = 4 
+   y.m = matrix(nrow=p,ncol=p)      
+   y.m[1,]=c(11, 10, 14,  8)
+   y.m[2,]=c(8,  12, 10, 12)
+   y.m[3,]=c(9,  11, 7, 15)
+   y.m[4,]=c(9, 8, 18, 6) 
+   y = as.vector(t(y.m))
+   A = as.factor(c(rep(1:p,each=p)))        # Row-factor.
+   B = as.factor(c(1, 2, 3, 4,              # Greek factor.
+                   2, 1, 4, 3,
+                   3, 4, 1, 2,
+                   4, 3, 2, 1))
+   C = as.factor(rep(c(1:p),p))             # Col-factor.  
+   D = as.factor(c(1, 2, 3, 4,              # Latin factor, orthogonal to Greek,
+                   3, 4, 1, 2,              # from cycling the last 3 rows in Greek.
+                   4, 3, 2, 1,
+                   2, 1, 4, 3))             
+   summary.aov(lm(y~A+B+C+D))
+   
+#             Df Sum Sq Mean Sq F value Pr(>F)
+# A            3    0.5   0.167   0.006  0.999 
+# B            3   33.5  11.167   0.401  0.764
+# C            3   19.0   6.333   0.228  0.872
+# D            3   13.5   4.500   0.162  0.916
+# Residuals    3   83.5  27.833
+
+a) Why do we not consider an interaction term in the model, e.g., AB? Hint: Try!
+
+  summary.aov(lm(y~A+B+C+D + A:B)) 
+
+We note that SSE = 0 . As explained in the lecture, without replication there is
+simply not enough df in the data to allow us to estimate the effects and sigma_epsilon.
+And without that estimate, we cannot do tests.  Indeed, the residuals are all zero;
+  lm(y~A+B+C+D + A:B)$resid
+
+b) Write code to compute SSA, SSB, SSC, SSD, SSE, all BY HAND. It will be convenient if you report them at the end of your code with c(SSA, SSB, SSC, SSD, SSE) .
+
+# The following is very similar to the soln to hw_lect12_2 (which is already posted):
+  y.... = sum(y)              
+  yi... = c(sum(y[A==1]), sum(y[A==2]), sum(y[A==3]), sum(y[A==4]))
+  y.j.. = c(sum(y[B==1]), sum(y[B==2]), sum(y[B==3]), sum(y[B==4]))
+  y..k. = c(sum(y[C==1]), sum(y[C==2]), sum(y[C==3]), sum(y[C==4]))
+  y...l = c(sum(y[D==1]), sum(y[D==2]), sum(y[D==3]), sum(y[D==4])) 
+
+  SSA = sum(yi...^2 )/p - y....^2/p^2    
+  SSB = sum(y.j..^2 )/p - y....^2/p^2    # altern:  p*sum((y.j../p - y..../p^2)^2) 
+  SSC = sum(y..k.^2 )/p - y....^2/p^2
+  SSD = sum(y...l^2 )/p - y....^2/p^2
+  SST = sum(y^2) - y....^2/p^2
+  SSE = SST - (SSA + SSB + SSC + SSD)
+  c(SSA, SSB, SSC, SSD, SSE)               # 0.5 33.5 19.0 13.5 83.5  = same as by R.
+
+c) Hopefully, in part b, you computed SSE by subtraction! Recompute SSE (call it SSE2) by finding the sum-square of the residuals (y_ijkl - y_hat_ijkl), where y_hat is found from predict(lm()).
+
+  SSE2 = sum((y - predict(lm(y ~ A + B + C + D)))^2)        # 83.5 = same as above.
+
+d) Report c(SSA, SSB, SSC, SSD, SSE, SSE2) using everything you've already done in parts b and c but with the following LS for the D factor. You don't need to reproduce all of the code in your answer; just report all the SSs. 
+ 
+      2, 1, 4, 3              # Latin factor, orthogonal to Greek,
+      3, 4, 1, 2              # from cycling the first 3 rows in Greek
+      1, 2, 3, 4
+      4, 3, 2, 1
+
+   D = as.factor(c(2, 1, 4, 3,           # Latin factor, orthogonal to Greek,
+                   3, 4, 1, 2,           # from cycling the first 3 rows in Greek
+                   1, 2, 3, 4,
+                   4, 3, 2, 1))
+   # Re-run part b
+   SSE2 = sum((y - predict(lm(y~A+B+C+D)))^2) 
+   c(SSA, SSB, SSC, SSD, SSE, SSE2)            # 0.5 33.5 19.0 83.5 13.5 13.5
+
+# There is no need to compare this set of SS values to those in part b, because they
+# WILL be different. After all, the two LS designs are different.
+
+e) Repeat part d but for the following design for the D factor:
+
+      2, 1, 4, 3 
+      3, 4, 1, 2
+      4, 3, 2, 1
+      1, 2, 3, 4
+
+   D = as.factor(c(2, 1, 4, 3,          # Latin factor, NOT orthogonal to Greek,
+                   3, 4, 1, 2,          # from permuting the last two rown in previous D.
+                   4, 3, 2, 1,
+                   1, 2, 3, 4))        
+   # Re-run part b    
+   SSE2 = sum((y - predict(lm(y~A+B+C+D)))^2) 
+   c(SSA, SSB, SSC, SSD, SSE, SSE2)           #  0.5 33.5 19.0  7.5 89.5 95.75
+   
+f) If you've done things right, the SSD for parts d and e will be different; and that makes perfect sense - agin, the two designs are different. But give some explanation for why SSE and SSE2 are different. 
+ 
+SSE and SSE2 are different because the Latin square D is no longer orthogonal to the Greek square B. As discussed in class, that means that the decomposition of SST has cross-terms in it, and so SSE cannot be computed by subtraction.  You can confirm that D is not orthogonal to B - every element in the juxtaposition of B and D appears twice.  
+
+################################################
+
+(Long) Moral: An *orthogonal design* is one that allows a complete decomposition of SST into terms corresponding to each of the factors (plus SSE), which in turn allows us to test the contribution of each effect. In GLSD, that orthogonality is assured when the Greek and Latin Squares are orthogonal. If those two squares are not orthogonal, then the decomposition of SST has cross terms. Not only we cannot compute SSE by subtraction (which is not a problem, because we can still compute it like SSE2), but more importantly, it becomes impossible to interpret the SS components. Just to make sure you see the importance of orthogonality in *design*, suppose you had selected the following LSD for D (or B):
+
+     1 2 3 4              # Latin factor, with NO orthogonal counterpart
+     2 4 1 3
+     3 1 4 2
+     4 3 2 1
+
+Then, the decomposition of SST would not be possible because it is known that the above LS has no orthogonal LS! The set of orthogonal LSs is a topic of mathematical research; even the number of orthogonal LSs of a given order is not well-known.
+
+In R, there is a quick way of checking orthogonality of the underlying design: Switch the order of the terms in lm(); if you get different SS values, the design is NOT orthogonal. This happens in R because the anova decomposition done in R is something called "sequential ANOVA," where the SS of each factor is computed *conditioned on* the variance explained/removed by the "previous" factor. So, there, the order of the terms in lm() matters. In orthogonal designs, the order does not matter. You can confirm that the following give different results:
+
+  summary.aov(lm(y~A+B+C+D))
+  summary.aov(lm(y~D+C+B+A))                     
+
+Finally, to compute the cross-terms, let's back-up to step 1 of the decomposition:
+
+   tt = y - y..../p^2
+   sum(tt^2)                                # SST above
+
+   alpha = yi.../p - y..../p^2              # The main effects
+   beta =  y.j../p - y..../p^2
+   gamma = y..k./p - y..../p^2
+   delta = y...l/p - y..../p^2
+
+# Here are the non-cross-terms in the decomposition:
+   p*sum(alpha^2)                      # = SSA
+   p*sum(beta^2)                       # = SSB
+   p*sum(gamma^2)                      # = SSC
+   p*sum(delta^2)                      # = SSD
+ 
+# Getting the cross-terms in GLSD is tricky, because of the restricted sums. But
+# this is the best I have come-up with: 
+
+   sum(beta[A] * gamma[B])          # 0
+   sum(beta[A] * gamma[C])          # 0
+   sum(beta[A] * gamma[D])          # 0
+   sum(beta[B] * gamma[C])          # 0
+   sum(beta[B] * gamma[D])          # NOT 0 unles B and D are orthogonal.
+   sum(beta[C] * gamma[D])          # 0
+
+# Technically, there should be cross-terms involving the e_ijkl, too, but I
+# don't know how to define it in R. Do NOT try to define it as
+# e = y - yi.../p - y.j../p - y..k./p - y...l/p + 3*y..../p^2
+# because e_ijkl should be a rank 4 tensor, but the above expression is a vector.
+
+# I'm going to summarize these results without all of the explanations so that you
+# can see the real moral. I'll include it in a lecture.

@@ -1,0 +1,337 @@
+# This lab will teach you how to do 1-way anova, and how to incorporate
+# contrasts into the analysis.
+
+# 1) Example 3.1 (p.70)
+
+# This exampe deals with a Completely Randomized Design to study the effect 
+# of a factor (called Power, with 4 levels: 160, 180, 200, and 220) on one 
+# response (called etch rate). The number of replicates is 5.
+
+   rm(list=ls(all=TRUE))
+
+   ######################## Read in data:
+
+   k = 4
+   r = 5
+   y.m = matrix(nrow=k,ncol=r)   # rows = factor, col = replicates
+   y.m[1,] = c(575,542,530,539,570)
+   y.m[2,] = c(565,593,590,579,610)
+   y.m[3,] = c(600,651,610,637,629)
+   y.m[4,] = c(725,700,715,685,710)
+
+   y = as.vector(t(y.m))        # This keeps cases in each population
+                                # together, and concatenates the pops.
+   A = as.factor(rep(1:k, each = r))
+#  A = as.factor(rep(c(160,180,200,220), each = r))
+
+   data = data.frame(A,y)
+
+   ####################### "Look" at data:
+
+   plot(c(A),data[,2])          # The raw data, and their boxplot summary:
+   plot(data)                   # note the variance in y is mostly constant.
+
+   # We have learned that we want the variances to be relatively constant.
+   # But if there is a relationship between the variances and the means,
+   # then (if the means are different - which is what we're testing for)
+   # the variances will be different too. So, one often checks for what is
+   # a "mean-variance relationship." If there is a mean-variance relationship
+   # in the data, one should apply a var-stablizing transformation, as
+   # discussed in class.
+
+   means = apply(y.m,1,mean)     
+   sds = apply(y.m,1,sd)        
+
+   plot(means,sds)              # No evidence for a mean/sd or mean/var relation.
+   plot(means,sds^2)            # So, no need for var-stablizing transformation.
+
+   ######################### Do 1-way anova:
+
+   lm.1 = lm(y~A)                  # We will use mostly lm()
+   lm.1 
+   summary.aov(lm.1)               # ANOVA Table (Table 3.4 (p.71)) ; note .aov
+   # By the way, aov() gives more precise SS values than summary.aov():
+   aov(y~A)
+
+   plot(lm.1)                      # Residual plots and more,
+   plot(c(A), lm.1$residuals)      # Alternatively, residual plot, by hand.
+   qqnorm(lm.1$residuals)          # and qqplot.  
+
+############################################################################
+
+# Q1. summary.lm(lm.1) produces a column called "Estimate". These are related 
+# to the conditional means of y. How? In other words, compare the numbers in 
+# the "Estimate" column with the "means" computed in the handout, and discover 
+# what is the relationship between them.  
+# Hint: By default, R treats one of the groups as a control group.
+
+# Soln:  (1 point if correct; 0.5 if there is a mention of differences between means)
+# The "Estimates" are given by
+
+  summary.lm(lm.1) 
+
+#             Estimate Std. Error t value Pr(>|t|)    
+# (Intercept)  551.200      8.169  67.471  < 2e-16 ***
+# A2            36.200     11.553   3.133  0.00642 ** 
+# A3            74.200     11.553   6.422 8.44e-06 ***
+# A4           155.800     11.553  13.485 3.73e-10 ***
+
+# The means are
+
+  means
+
+# 551.2 587.4 625.4 707.0
+
+# We know from lectures that the Estimates are in fact related to sample 
+# means (means). And as suggested by the hint, the relationship is this:
+# (Intercept)  551.200   = means[1]           = control
+# A2           36.200    = means[2] - means[1]
+# A3           74.200    = means[3] - means[1]
+# A4          155.800    = means[4] - means[1]
+
+# The reason R produces these estimates has to do with the default choice
+# of the contrasts (see below).
+
+#############################################################################
+
+   ######################## Do Tukey's pairwise comparison:
+
+# When an anova F-test is significant, then we know that at least
+# 2 of the means are different. But which ones? Tukey does all the
+# pairwise comparisons assuring that the *family-wise* alpha is fixed
+# at say 0.05. In other words, the probability of many *any* type I
+# error is 0.05:
+
+    aov.1 = aov(y ~ A)
+    summary(aov.1)
+    tuk.1 = TukeyHSD(aov.1, conf.level=0.95)
+    tuk.1
+    plot(tuk.1)      # Shows the CIs, but as a figure.
+
+##########################################################################
+
+# Q2: tuk.1 contains the lower (lwr) and upper (upr) sides of a
+# 2-sided CI. It also includes a p-value from a corresponding two-sided
+# hypothesis test (testing the equality of two means). Based on these
+# quantities, what is the conclusion regarding the equality of the means?
+
+# Soln (1 point if correct interpretation; 0.5 for partial attempts)
+
+# As explained in the handout (above), and in the help pages, TukeyHSD()
+# performs several pairwise tests, producing a confidence interval
+# for the difference between the two means, and a p-value for a 
+# 2-sided test of equality of the two means. In this case, none of the
+# confidence intervals include zero (equivalently, none of the p-values
+# exceed 0.05), and so there is evidence that all means are different.
+
+###########################################################################
+
+#  2) Unbalanced designs
+
+# As mentioned in class, most of what we do "by hand" will involve the
+# situation where the number of observations in each group is equal.
+# It's called a "balanced design." However, we *will* come across problems
+# that are not from a balanced design, and so we should be able to handle
+# them in R. The big difference is in the way the data are entered into
+# R. If the design is not balanced, then data cannot be entered as a matrix.
+
+# Here is problem 3.12:
+# I (the book's author) belong to a golf club in my neighborhood. I divide 
+# the year into three golf seasons: summer, winter and shoulder. I believe 
+# that I play my best golf during the summer and shoulder seasons, and my 
+# worst golf is during the winter. Here is the data from last year:
+  
+   rm(list=ls(all=TRUE))
+   k = 4
+   y1 = c(83, 85, 85, 87, 90, 88, 88, 84, 91, 90)
+   y2 = c(91, 87, 84, 87, 85, 86, 83)
+   y3 = c(94, 91, 87, 85, 87, 91, 92, 86)
+   y = c(y1,y2,y3)
+   A = as.factor( c(rep(1,length(y1), each = 1),        # Make sure you
+                    rep(2,length(y2), each = 1),        # understand how
+                    rep(3,length(y3), each = 1) ) )     # this works.
+
+   data = data.frame(A,y)
+   plot(data)
+   plot(c(A),data[,2])
+
+   lm.2 = lm(y~A)              # Do ANOVA.
+   summary.aov(lm.2)           # ANOVA Table
+   plot(lm.2)                  # Residual plots and more.
+   qqnorm(lm.2$residuals)      # Alternatively.
+
+#########################################################################
+
+# Q3. Based on the above results, what is the conclusion regarding the
+# author's belief that he plays better during summer and shoulder seasons?
+# On what element(s) of the above results are you basing your conclusion?
+
+# Soln: (1 point if correct 1-way anova and interpretation; 0.5 for partial answers).
+
+# The p-value of the 1-WAY anova F-test is 0.144 (i.e., larger than alpha),
+# and so there is no evidence that the authors three mean scores (for the
+# three seasons) are different. Although it may be tempting to test the mean 
+# of the winter scores with those of summer and shoulder (as suggested in
+# the statement of the problem), there is no reason to do that test, because
+# of the non-significance of the 1-way anova test.
+
+#########################################################################
+
+# 3) Contrasts 
+
+# Here is problem 3.23
+# Four chemists are asked to determine the percentage of methyl alcohol in a 
+# certain chemical compound. Each chemist makes three determinations, and the 
+# results are the following:
+#                                   Percentage of
+#   Chemist                        Methyl Alcohol
+#       1               84.99            84.04         84.38
+#       2               85.15            85.13         84.88
+#       3               84.72            84.48         85.16
+#       4               84.20            84.10         84.55
+# (a) Do chemists differ significantly? Use alpha = 0.05.
+# (b) Analyze the residuals from this experiment.
+# (c) If chemist 2 is a new employee, construct a meaningful set 
+#     of (orthogonal) contrasts that might have been useful at the 
+#     start of the experiment.
+
+   rm(list=ls(all=TRUE))
+   k = 4
+   r = 3
+   y.m = matrix(nrow=k,ncol=r)      # rows = factor, col = replicates
+   y.m[1,] = c(84.99, 84.04, 84.38)
+   y.m[2,] = c(85.15, 85.13, 84.88)
+   y.m[3,] = c(84.72, 84.48, 85.16)
+   y.m[4,] = c(84.20, 84.10, 84.55) 
+   y = t(y.m) 
+   y = as.vector(y)         
+   A = as.factor(rep(1:k, each = r))
+   means = apply(y.m,1,mean)     
+
+   data = data.frame(A,y)
+   plot(data)             
+   plot(c(A),data[,2])
+
+   lm.3 = lm(y~A)        
+   summary.aov(lm.3)        # p-value < alpha. Note SS_Tr = 1.0446 .   Note .aov
+   plot(lm.3)                    
+
+  ####### contrasts are analyzed by using the "split" argument in summary.aov():
+
+   summary.aov(lm.3, split=list(A=list(A=1,A=2,A=3))) 
+
+#               Df Sum Sq Mean Sq F value Pr(>F)  
+# A              3 1.0446  0.3482   3.246 0.0813 .
+#   A: A         1 0.6561  0.6561   6.116 0.0385 *
+#   A: A     .1  1 0.3362  0.3362   3.134 0.1146  
+#   A: A     .2  1 0.0523  0.0523   0.487 0.5049  
+
+# These contrast SS values correspond to the default contrast vectors
+# in R, namely the comparison of the 2nd treatment with the 1st,
+# comparison of 3rd treatment with the 1st, and comparison of the 4th
+# treatment with the 1st. In other words, treatments 2, 3, and 4, are each
+# compared with 1, as can be seen by
+
+   contrasts(A)
+
+   # Note that R encodes contrasts non-intuitively, or at least
+   # not as zero-sum contrasts. In the above, the omitted level (0 0 0) 
+   # is a control pop, and the "1"s indicate the comparisons that R will 
+   # perform with that control. So, by default, R will compare 1 with 2, 
+   # 1 with 3, and 1 with 4.
+
+# We can use our more-intuitive encoding of the contrast vectors. For example,
+# the default encoding in R can be written more intuitively as
+
+contrasts(A,3) = cbind(c(1,-1,0,0), c(1,0,-1,0), c(1,0,0,-1))
+
+# and then we see that summary.aov() produces the same answers as above
+
+summary.aov(lm.3, split=list(A=list(A=1,A=2,A=3)))
+
+#               Df Sum Sq Mean Sq F value Pr(>F)  
+# A              3 1.0446  0.3482   3.246 0.0813 .
+#   A: A         1 0.6561  0.6561   6.116 0.0385 *
+#   A: A     .1  1 0.3362  0.3362   3.134 0.1146  
+#   A: A     .2  1 0.0523  0.0523   0.487 0.5049  
+
+# Either way, the  p-value = .038 means that treatment 2 is different from 
+# treatment 1.  And the p-values 0.11 and 0.50 suggest that there is no 
+# evidence that treatment 3 is different from treatment 1, nor 4 is different 
+# from 1.
+
+# We can change the contrasts. For example, here are three different
+# contrast vectors. For example, the first one compares the 2nd
+# treatment with the average of the other 3 treatments. The second
+# one compares the first treatment with the average of the last two.
+# Finally, the last contrast vector compares the last two treatments.
+# Later, we will see that there is something special about these
+# three contrast vectors (they are called "orthogonal.")
+
+   contrasts(A,3) = cbind(c(1,-3,1,1), c(-2,0,1,1), c(0,0,-1,1)) 
+
+# The 3 in the argument of contrasts is the number of contrast vectors.
+
+   lm.33 = lm(y~A)
+   summary.aov(lm.33, split=list(A=list(A=1,A=2,A=3))) 
+
+#               Df Sum Sq Mean Sq F value Pr(>F)  
+# A              3 1.0446  0.3482   3.246 0.0813 .
+#   A: A         1 0.6561  0.6561   6.116 0.0385 *
+#   A: A     .1  1 0.0084  0.0084   0.079 0.7861  
+#   A: A     .2  1 0.3800  0.3800   3.542 0.0966 .
+# Residuals      8 0.8582  0.1073    
+
+# We can see that the only significant (at alpha = 0.05) comparison is
+# the one corresponding to the first contrast vector, i.e., comparing
+# the second treatment with the average of the other 3 treatments.  
+# Note that the SS of contrasts add-up to SS_Treatment (1.044). That's a
+# consequence of the orthogonality of the three contrast vectors.
+
+# You can confirm that the contrast "Estimates" in lm.33 are consistent with the
+# corresponding differences between means:
+
+  summary.lm(lm.33)
+
+#             Estimate 
+# (Intercept) 84.64833   
+# A1          -0.13500   = (1/4) * ( (means[1] + means[3] + means[4])/3 - means[2] )
+# A2           0.02167   = (1/3) * ( (means[3] + means[4])/2 - means[1] )
+# A3          -0.25167   = (1/2) * (  means[4] - means[3] )
+
+# The reason for the "extra" 1/2, 1/3, and 1/4 will become apparent later.
+
+# Also, note that the comparison of mu2 and the average of the other three,
+# i.e., (mu1 + mu3 + mu4)/3 gives the same SS (i.e., 0.6561) in lm.33
+# as the comparison of mu2 with mu1 performed in lm.3. A heuristic
+# explanation is this: 
+# lm.3 implies that there is no evidence that mu1 is different from
+# mu3, nor from mu4. So, we can *carefuly* write mu1=mu3, and mu1=mu4,
+# in which case (mu1 + mu3 + mu4)/3  = mu1. So, the comparisons in lm.3
+# are in fact consistent with those in lm.33 .
+
+##############################################################
+
+# Q4. Select contrast vectors that will perform pairwise comparison
+# between all 4 groups in the data of Example 3.1 (item 1 in handout above),
+# and extract the contrast SS values, and their p-values. Are
+# the conclusions (regarding equality of means) the same as those
+# from Tukey's analysis?
+
+# Soln: (1 point for setting contrasts correctly; the rest is ignored).
+
+# We can use 6 contrast vectors, each of which compares two means:
+
+   contrasts(A,6) = cbind(c(1,-1,0,0), c(1,0,-1,0), c(1,0,0,-1),
+                          c(0,1,-1,0), c(0,1,0,-1), c(0,0,1,-1) )
+   A              # shows all 6 contrasts
+   lm.4 = lm(y~A) 
+   summary.aov(lm.4, split=list(A=list(A=1,A=2,A=3)))
+
+# Warning to students: I'm stopping the remainder of the solution
+# to Q4, because R appears to be doing some strange things which you
+# cannot be responsible for. So, in this question, only 1 point was
+# given to those who wrote something along the lines of what appears above.
+
+
+
